@@ -25,111 +25,108 @@ COMPONENT_PREFIXES = frozenset({
 })
 
 
-def collect_ids(root: Path, prefix: str) -> set[str]:
-    """Return the set of Description.Id values for all non-patch defs matching prefix."""
-    ids: set[str] = set()
-    for path in root.rglob(f"{prefix}_*.json"):
-        parts_lower = [p.lower() for p in path.parts]
-        if "advancedjsonmerge" in parts_lower:
-            continue
-        try:
-            data = json.loads(path.read_text(encoding="utf-8-sig"))
-            id_val = data.get("Description", {}).get("Id", "")
-            if id_val:
-                ids.add(id_val)
-        except (json.JSONDecodeError, OSError):
-            pass
-    return ids
+def main() -> int:
+    root = Path(__file__).parent.parent.parent
+    errors: list[str] = []
 
+    # Single-pass walk: collect all data in one traversal instead of 4 separate rglobs.
+    chassis_ids: set[str] = set()
+    vchassis_ids: set[str] = set()
+    component_stems: set[str] = set()
 
-def check_chassis_refs(
-    root: Path,
-    mechdef_prefix: str,
-    chassis_ids: set[str],
-    errors: list[str],
-) -> int:
-    """Check that every mechdef/vehicledef ChassisID has a matching chassisdef."""
-    checked = 0
-    for path in sorted(root.rglob(f"{mechdef_prefix}_*.json")):
-        parts_lower = [p.lower() for p in path.parts]
-        if "advancedjsonmerge" in parts_lower:
-            continue
-        try:
-            data = json.loads(path.read_text(encoding="utf-8-sig"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        chassis_id = data.get("ChassisID", "")
-        if chassis_id and chassis_id not in chassis_ids:
-            errors.append(
-                f"{path.name}: ChassisID '{chassis_id}' has no matching chassisdef"
-            )
-        checked += 1
-    return checked
+    # Deferred: files that need chassis/component checks after the full pass collects IDs.
+    mechdefs: list[tuple[Path, dict]] = []
+    vehicledefs: list[tuple[Path, dict]] = []
 
-
-def collect_component_stems(root: Path) -> set[str]:
-    """Return lowercased stems for all component def files (case-insensitive prefix match)."""
-    stems: set[str] = set()
     for path in root.rglob("*.json"):
         parts_lower = [p.lower() for p in path.parts]
         if "advancedjsonmerge" in parts_lower:
             continue
         if any(p.startswith(".") for p in path.parts):
             continue
+
         stem_lower = path.stem.lower()
         prefix = stem_lower.split("_")[0]
+
         if prefix in COMPONENT_PREFIXES:
-            stems.add(stem_lower)
-    return stems
+            component_stems.add(stem_lower)
 
+        if stem_lower.startswith("chassisdef_"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+                id_val = data.get("Description", {}).get("Id", "")
+                if id_val:
+                    chassis_ids.add(id_val)
+            except (json.JSONDecodeError, OSError):
+                pass
 
-def check_inventory_refs(
-    root: Path,
-    def_prefix: str,
-    component_stems: set[str],
-    errors: list[str],
-) -> tuple[int, int]:
-    """Check that every inventory ComponentDefID resolves to a known component stem."""
-    defs_checked = 0
-    items_checked = 0
-    for path in sorted(root.rglob(f"{def_prefix}_*.json")):
-        parts_lower = [p.lower() for p in path.parts]
-        if "advancedjsonmerge" in parts_lower:
-            continue
-        try:
-            data = json.loads(path.read_text(encoding="utf-8-sig"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        defs_checked += 1
+        elif stem_lower.startswith("vehiclechassisdef_"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+                id_val = data.get("Description", {}).get("Id", "")
+                if id_val:
+                    vchassis_ids.add(id_val)
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        elif stem_lower.startswith("mechdef_"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+                mechdefs.append((path, data))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        elif stem_lower.startswith("vehicledef_"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))
+                vehicledefs.append((path, data))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+    mech_checked = 0
+    vehicle_checked = 0
+    mech_inv_items = 0
+    veh_inv_items = 0
+
+    for path, data in mechdefs:
+        chassis_id = data.get("ChassisID", "")
+        if chassis_id and chassis_id not in chassis_ids:
+            errors.append(
+                f"{path.name}: ChassisID '{chassis_id}' has no matching chassisdef"
+            )
+        mech_checked += 1
         for i, item in enumerate(data.get("inventory", [])):
             cid = item.get("ComponentDefID", "")
             if not cid:
                 continue
             cid_lower = cid.lower()
-            prefix = cid_lower.split("_")[0]
-            if prefix not in COMPONENT_PREFIXES:
-                continue  # engine parts, fixed slots, etc — not validated here
-            items_checked += 1
+            if cid_lower.split("_")[0] not in COMPONENT_PREFIXES:
+                continue
+            mech_inv_items += 1
             if cid_lower not in component_stems:
                 errors.append(
                     f"{path.name}: inventory[{i}] ComponentDefID '{cid}' has no backing def"
                 )
-    return defs_checked, items_checked
 
-
-def main() -> int:
-    root = Path(__file__).parent.parent.parent
-    errors: list[str] = []
-
-    chassis_ids = collect_ids(root, "chassisdef")
-    vchassis_ids = collect_ids(root, "vehiclechassisdef")
-
-    mech_checked = check_chassis_refs(root, "mechdef", chassis_ids, errors)
-    vehicle_checked = check_chassis_refs(root, "vehicledef", vchassis_ids, errors)
-
-    component_stems = collect_component_stems(root)
-    mech_inv_defs, mech_inv_items = check_inventory_refs(root, "mechdef", component_stems, errors)
-    veh_inv_defs, veh_inv_items = check_inventory_refs(root, "vehicledef", component_stems, errors)
+    for path, data in vehicledefs:
+        chassis_id = data.get("ChassisID", "")
+        if chassis_id and chassis_id not in vchassis_ids:
+            errors.append(
+                f"{path.name}: ChassisID '{chassis_id}' has no matching vehiclechassisdef"
+            )
+        vehicle_checked += 1
+        for i, item in enumerate(data.get("inventory", [])):
+            cid = item.get("ComponentDefID", "")
+            if not cid:
+                continue
+            cid_lower = cid.lower()
+            if cid_lower.split("_")[0] not in COMPONENT_PREFIXES:
+                continue
+            veh_inv_items += 1
+            if cid_lower not in component_stems:
+                errors.append(
+                    f"{path.name}: inventory[{i}] ComponentDefID '{cid}' has no backing def"
+                )
 
     total_chassis = mech_checked + vehicle_checked
     total_inv_items = mech_inv_items + veh_inv_items
@@ -145,7 +142,7 @@ def main() -> int:
         f"({mech_checked} mechdefs → {len(chassis_ids)} chassisdefs, "
         f"{vehicle_checked} vehicledefs → {len(vchassis_ids)} vehiclechassisdefs)\n"
         f"     inventory refs: {total_inv_items} items across "
-        f"{mech_inv_defs + veh_inv_defs} defs → {len(component_stems)} known components"
+        f"{mech_checked + vehicle_checked} defs → {len(component_stems)} known components"
     )
     return 0
 
