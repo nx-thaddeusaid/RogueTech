@@ -16,3 +16,19 @@ jobs:
           python-version: "3.12"
       - name: Check mechdef/vehicledef → chassisdef references
         run: python .github/scripts/check_refs.py
+
+  check-system-refs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: RogueTech
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/InnerSphereMap
+          path: InnerSphereMap
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check RogueTech → InnerSphereMap system ID references
+        run: python RogueTech/.github/scripts/check_system_refs.py RogueTech/ InnerSphereMap/
