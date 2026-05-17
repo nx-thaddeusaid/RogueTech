@@ -21,8 +21,8 @@ REQUIRED_FIELDS = {
     "vehiclechassisdef_":    ["Description", "HardpointDataDefID", "Locations"],
     "starsystemdef_":        ["Description", "StarType"],
     "lancedef_":             ["Description", "LanceUnits"],
-    "pilot_":                ["Description", "Piloting", "Gunnery"],
-    "event_":                ["Description", "Trigger"],
+    "pilot_":                ["Description", "BasePiloting", "BaseGunnery"],
+    "event_":                ["Description", "EventType", "Options"],
     "turretdef_":            ["Description", "ChassisID"],
     "turretchassisdef_":     ["Description", "HardpointDataDefID"],
 }
