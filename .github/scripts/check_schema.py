@@ -17,6 +17,24 @@ from pathlib import Path
 root = Path(__file__).parent.parent.parent
 
 
+def _load_known_owner_ids() -> frozenset[str]:
+    ids = set()
+    for p in root.rglob("faction_*.json"):
+        if any(part.startswith(".") for part in p.parts):
+            continue
+        try:
+            d = json.loads(p.read_text(encoding="utf-8-sig"))
+            fid = d.get("ID", "")
+            if fid.startswith("faction_"):
+                ids.add(fid[len("faction_"):])
+        except Exception:
+            pass
+    return frozenset(ids)
+
+
+KNOWN_OWNER_IDS: frozenset[str] = _load_known_owner_ids()
+
+
 # ── per-type checkers ─────────────────────────────────────────────────────────
 
 def _check_mechdef(d: dict) -> list[str]:
@@ -65,8 +83,12 @@ def _check_vehiclechassisdef(d: dict) -> list[str]:
     elif tonnage <= 0:
         errs.append(f"Tonnage must be positive: {tonnage}")
     locs = d.get("Locations")
-    if not isinstance(locs, list) or len(locs) == 0:
-        errs.append("Locations missing or empty")
+    n = len(locs) if isinstance(locs, list) else None
+    if n not in (4, 5):
+        errs.append(
+            f"Locations must be an array of 4 or 5 entries (vehicles), "
+            f"got {n if n is not None else type(locs).__name__}"
+        )
     return errs
 
 
@@ -80,7 +102,17 @@ def _check_weapon(d: dict) -> list[str]:
     damage = d.get("Damage")
     if damage is not None and isinstance(damage, (int, float)) and damage < 0:
         errs.append(f"Damage is negative: {damage}")
+    heat = d.get("HeatGenerated")
+    if heat is not None and isinstance(heat, (int, float)) and heat < 0:
+        errs.append(f"HeatGenerated is negative: {heat}")
     return errs
+
+
+def _check_starsystemdef(d: dict) -> list[str]:
+    owner = d.get("ownerID")
+    if owner and owner not in KNOWN_OWNER_IDS:
+        return [f"ownerID '{owner}' not in known faction list"]
+    return []
 
 
 CHECKS = {
@@ -88,6 +120,7 @@ CHECKS = {
     "chassisdef_": _check_chassisdef,
     "vehicledef_": _check_vehicledef,
     "vehiclechassisdef_": _check_vehiclechassisdef,
+    "starsystemdef_": _check_starsystemdef,
     "Weapon_": _check_weapon,
     "weapon_": _check_weapon,
 }
