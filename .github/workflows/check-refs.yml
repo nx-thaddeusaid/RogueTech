@@ -32,3 +32,87 @@ jobs:
           python-version: "3.12"
       - name: Check RogueTech → InnerSphereMap system ID references
         run: python RogueTech/.github/scripts/check_system_refs.py RogueTech/ InnerSphereMap/
+
+  check-cab-refs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: RogueTech
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-Clan-GoldenCentury
+          path: cabs/Clan-GoldenCentury
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-Clan-Modern
+          path: cabs/Clan-Modern
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-IS-Customs
+          path: cabs/IS-Customs
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-IS-ClanInvasion
+          path: cabs/IS-ClanInvasion
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-IS-StarLeague
+          path: cabs/IS-StarLeague
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-IS-DarkAge
+          path: cabs/IS-DarkAge
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-IS-CivilWar
+          path: cabs/IS-CivilWar
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-IS-Mech
+          path: cabs/IS-Mech
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-CustomUnits
+          path: cabs/CustomUnits
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-Maps
+          path: cabs/Maps
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/Community-Asset-Bundle-Data
+          path: cabs/Data
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: BattletechModders/CAB-3025
+          path: cabs/CAB-3025
+          sparse-checkout: "**/*.json"
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check RogueTech → CAB HardpointDataDefID references
+        run: python RogueTech/.github/scripts/check_cab_refs.py RogueTech/ cabs/*/
