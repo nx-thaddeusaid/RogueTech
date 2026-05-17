@@ -5,6 +5,9 @@ on:
     branches: [Dev, main, nightmare-edition]
   pull_request:
     branches: [Dev, main]
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
 
 jobs:
   check-refs:
@@ -116,3 +119,13 @@ jobs:
           python-version: "3.12"
       - name: Check RogueTech → CAB HardpointDataDefID references
         run: python RogueTech/.github/scripts/check_cab_refs.py RogueTech/ cabs/*/
+
+  validate-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate def field presence and value ranges
+        run: python .github/scripts/check_schema.py
