@@ -65,7 +65,7 @@ def collect_ism_ids(ism_root: Path) -> set[str]:
 def extract_system_refs(obj, refs: set[str]) -> None:
     """Recursively extract all string values starting with 'starsystemdef_'."""
     if isinstance(obj, str):
-        if obj.startswith("starsystemdef_"):
+        if obj.startswith("starsystemdef_") and obj != "starsystemdef_":
             # Skip fragment suffixes that appear in path-like strings
             if not (obj.endswith(".json") or obj.endswith(".Details")
                     or obj.endswith(".Name") or obj.endswith(".Id")):
