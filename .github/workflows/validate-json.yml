@@ -5,6 +5,9 @@ on:
     branches: [Dev, main, nightmare-edition]
   pull_request:
     branches: [Dev, main]
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
 
 jobs:
   validate-json:
