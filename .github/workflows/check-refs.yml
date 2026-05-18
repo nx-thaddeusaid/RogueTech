@@ -129,3 +129,13 @@ jobs:
           python-version: "3.12"
       - name: Validate def field presence and value ranges
         run: python .github/scripts/check_schema.py
+
+  snapshot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check JSON snapshot against baseline (catches silent file deletions)
+        run: python .github/scripts/snapshot_check.py
